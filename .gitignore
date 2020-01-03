@@ -1,0 +1,7 @@
+build/
+rom/
+.settings/
+.cproject
+.project
+.mxproject
+
