@@ -14,15 +14,13 @@
 //#include "save.h"
 //#include "roccow.h"
 
-#define SRAM_SAVE_ADDR 0x080E0000
-
 uint8_t sram[RAM1_SIZE];
 uint8_t sram2[RAM2_SIZE]__attribute__((section(".ccmram")));
 
 cartridge_t cartridge = { .rom = lsdj_gb, .ram = sram, .rom_bank = 1,
 		.ram_bank = 0, };
 
-void load_save(void) {
+void load_ram(void) {
 
 //	memcpy(sram, roccow_sav, RAM1_SIZE);
 //	memcpy(sram2, roccow_sav + RAM1_SIZE, RAM2_SIZE);
@@ -43,9 +41,7 @@ void load_save(void) {
 static FLASH_EraseInitTypeDef EraseInitStruct;
 uint32_t SectorError = 0;
 
-void save_ram(void) {
-	LL_GPIO_SetOutputPin(LED2_GPIO_Port, LED2_Pin);
-	HAL_FLASH_Unlock();
+void erase_ram(void){
 
 	EraseInitStruct.TypeErase = FLASH_TYPEERASE_SECTORS;
 	EraseInitStruct.VoltageRange = FLASH_VOLTAGE_RANGE_3;
@@ -55,6 +51,13 @@ void save_ram(void) {
 
 		Error_Handler();
 	}
+}
+
+void save_ram(void) {
+	LL_GPIO_SetOutputPin(LED2_GPIO_Port, LED2_Pin);
+	HAL_FLASH_Unlock();
+
+	erase_ram();
 
 	uint32_t Address = SRAM_SAVE_ADDR;
 	int i=0;

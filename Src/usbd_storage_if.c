@@ -23,7 +23,9 @@
 #include "usbd_storage_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-
+#include <string.h>
+#include "fat.h"
+#include "cartridge.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -64,11 +66,15 @@
   */
 
 #define STORAGE_LUN_NBR                  1
-#define STORAGE_BLK_NBR                  0x10000
+#define STORAGE_BLK_NBR                  0x930
 #define STORAGE_BLK_SIZ                  0x200
 
 /* USER CODE BEGIN PRIVATE_DEFINES */
-
+#define FAT_END_BLK 8
+#define ROM_START_BLK 41
+#define ROM_END_BLK 1161
+#define RAM_START_BLK 2089
+#define RAM_END_BLK 2345
 /* USER CODE END PRIVATE_DEFINES */
 
 /**
@@ -114,7 +120,9 @@ const int8_t STORAGE_Inquirydata_FS[] = {/* 36 */
 /* USER CODE END INQUIRY_DATA_FS */
 
 /* USER CODE BEGIN PRIVATE_VARIABLES */
-
+int flash_unlocked=0;
+int rom_erased=0;
+int ram_erased=0;
 /* USER CODE END PRIVATE_VARIABLES */
 
 /**
@@ -230,6 +238,23 @@ int8_t STORAGE_IsWriteProtected_FS(uint8_t lun)
 int8_t STORAGE_Read_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t blk_len)
 {
   /* USER CODE BEGIN 6 */
+
+	int addr;
+
+	if (blk_addr<FAT_END_BLK){
+		memcpy(buf,fat_bin+blk_addr*STORAGE_BLK_SIZ,blk_len*STORAGE_BLK_SIZ);
+	}
+	else if (blk_addr>=ROM_START_BLK&&blk_addr<ROM_END_BLK){
+		addr=blk_addr-ROM_START_BLK;
+		memcpy(buf,cartridge.rom+addr*STORAGE_BLK_SIZ,blk_len*STORAGE_BLK_SIZ);
+	}
+	else if (blk_addr>=RAM_START_BLK&&blk_addr<RAM_END_BLK){
+		addr=blk_addr-RAM_START_BLK;
+		memcpy(buf, ((uint8_t *)SRAM_SAVE_ADDR)+addr*STORAGE_BLK_SIZ,blk_len*STORAGE_BLK_SIZ);
+	}
+	else{
+		memset(buf,0,blk_len*STORAGE_BLK_SIZ);
+	}
   return (USBD_OK);
   /* USER CODE END 6 */
 }
@@ -242,6 +267,36 @@ int8_t STORAGE_Read_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t bl
 int8_t STORAGE_Write_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t blk_len)
 {
   /* USER CODE BEGIN 7 */
+
+	int addr;
+
+	if (blk_addr<FAT_END_BLK){
+		memcpy(fat_bin+blk_addr*STORAGE_BLK_SIZ,buf,blk_len*STORAGE_BLK_SIZ);
+	}
+	else if (blk_addr>=RAM_START_BLK&&blk_addr<RAM_END_BLK){
+		addr=blk_addr-RAM_START_BLK;
+
+		LL_GPIO_SetOutputPin(LED2_GPIO_Port, LED2_Pin);
+		if (!flash_unlocked){
+			HAL_FLASH_Unlock();
+			flash_unlocked=1;
+		}
+		if (!ram_erased){
+			erase_ram();
+			ram_erased=1;
+		}
+
+		for (int i = 0; i < blk_len * STORAGE_BLK_SIZ /4; i++) {
+			if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, SRAM_SAVE_ADDR+addr*STORAGE_BLK_SIZ+i*4,((uint32_t*) buf)[i]) == HAL_OK)
+			{
+			} else {
+				Error_Handler();
+			}
+		}
+
+		LL_GPIO_ResetOutputPin(LED2_GPIO_Port, LED2_Pin);
+	}
+
   return (USBD_OK);
   /* USER CODE END 7 */
 }

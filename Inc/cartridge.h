@@ -14,6 +14,7 @@
 #define RAM1_SIZE (96*1024)
 #define RAM2_SIZE (32*1024)
 
+#define SRAM_SAVE_ADDR 0x080E0000
 
 typedef struct{
 
@@ -28,7 +29,8 @@ extern cartridge_t cartridge;
 extern uint8_t sram[RAM1_SIZE];
 extern uint8_t sram2[RAM2_SIZE];
 
-void load_save(void);
+void load_ram(void);
 void save_ram(void);
+void erase_ram(void);
 
 #endif /* INC_CARTRIDGE_H_ */
