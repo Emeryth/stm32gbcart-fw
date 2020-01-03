@@ -72,9 +72,9 @@
 /* USER CODE BEGIN PRIVATE_DEFINES */
 #define FAT_END_BLK 8
 #define ROM_START_BLK 41
-#define ROM_END_BLK 1161
+#define ROM_END_BLK (ROM_START_BLK+(ROM_MAX_SIZE/STORAGE_BLK_SIZ))
 #define RAM_START_BLK 2089
-#define RAM_END_BLK 2345
+#define RAM_END_BLK (RAM_START_BLK+(RAM_SIZE/STORAGE_BLK_SIZ))
 /* USER CODE END PRIVATE_DEFINES */
 
 /**
@@ -272,6 +272,29 @@ int8_t STORAGE_Write_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t b
 
 	if (blk_addr<FAT_END_BLK){
 		memcpy(fat_bin+blk_addr*STORAGE_BLK_SIZ,buf,blk_len*STORAGE_BLK_SIZ);
+	}
+	else if (blk_addr>=ROM_START_BLK&&blk_addr<ROM_END_BLK){
+		addr=blk_addr-ROM_START_BLK;
+
+		LL_GPIO_SetOutputPin(LED2_GPIO_Port, LED2_Pin);
+			if (!flash_unlocked){
+				HAL_FLASH_Unlock();
+				flash_unlocked=1;
+			}
+			if (!rom_erased){
+				erase_rom();
+				rom_erased=1;
+			}
+
+			for (int i = 0; i < blk_len * STORAGE_BLK_SIZ /4; i++) {
+				if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, ROM_SAVE_ADDR+addr*STORAGE_BLK_SIZ+i*4,((uint32_t*) buf)[i]) == HAL_OK)
+				{
+				} else {
+					Error_Handler();
+				}
+			}
+
+			LL_GPIO_ResetOutputPin(LED2_GPIO_Port, LED2_Pin);
 	}
 	else if (blk_addr>=RAM_START_BLK&&blk_addr<RAM_END_BLK){
 		addr=blk_addr-RAM_START_BLK;

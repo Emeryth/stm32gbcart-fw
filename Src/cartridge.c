@@ -10,14 +10,15 @@
 #include "main.h"
 
 //#include "gejmboj.h"
-#include "lsdj.h"
+//#include "lsdj.h"
 //#include "save.h"
 //#include "roccow.h"
 
 uint8_t sram[RAM1_SIZE];
 uint8_t sram2[RAM2_SIZE]__attribute__((section(".ccmram")));
 
-cartridge_t cartridge = { .rom = lsdj_gb, .ram = sram, .rom_bank = 1,
+cartridge_t cartridge = { .rom = (uint8_t *)ROM_SAVE_ADDR
+		, .ram = sram, .rom_bank = 1,
 		.ram_bank = 0, };
 
 void load_ram(void) {
@@ -51,6 +52,19 @@ void erase_ram(void){
 
 		Error_Handler();
 	}
+}
+
+void erase_rom(void){
+
+	EraseInitStruct.TypeErase = FLASH_TYPEERASE_SECTORS;
+	EraseInitStruct.VoltageRange = FLASH_VOLTAGE_RANGE_3;
+	EraseInitStruct.Sector = FLASH_SECTOR_5;
+	EraseInitStruct.NbSectors = 6;
+	if (HAL_FLASHEx_Erase(&EraseInitStruct, &SectorError) != HAL_OK) {
+
+		Error_Handler();
+	}
+
 }
 
 void save_ram(void) {

@@ -157,8 +157,8 @@ int main(void) {
 				if (cartridge.rom_bank == 0) {
 					cartridge.rom_bank++;
 				}
-				if (cartridge.rom_bank >= 35)
-					cartridge.rom_bank = 35;
+				if (cartridge.rom_bank >= ROM_MAX_BANK)
+					cartridge.rom_bank = ROM_MAX_BANK;
 
 			} else if ((address & A14_Pin)) {
 				// change RAM bank
